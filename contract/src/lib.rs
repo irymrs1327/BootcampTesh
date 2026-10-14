@@ -104,5 +104,24 @@ mod test {
 
         assert!(result.is_err());
     }
+    
+    #[test]
+    fn invalid_hash_is_rejected() {
+        let env = Env::default();
+        let contract_id = env.register(VeriIdContract, ());
+        let client = VeriIdContractClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize(&admin);
+
+        let id = String::from_str(&env, "CERT-INVALID");
+        let hash = String::from_str(&env, "abc123");
+
+        let result = client.try_register_certificate(&admin, &id, &hash);
+
+        assert!(result.is_err());
+    }
+
 
 }
