@@ -124,3 +124,14 @@ El contrato ubicado en `contract/src/lib.rs` implementa las siguientes operacion
 ## Autoras y autores
 
 Proyecto académico de VERI-ID desarrollado como prototipo de registro y verificación de certificados digitales.
+
+## Pruebas del contrato Soroban
+
+Las pruebas automatizadas del contrato comprueban:
+
+- El registro y la verificación de certificados mediante su hash.
+- El rechazo de certificados duplicados.
+- El rechazo de hashes inválidos.
+- La consulta de certificados inexistentes.
+
+**Resultado actual:** 4 pruebas aprobadas y 0 fallidas mediante `cargo test`.
