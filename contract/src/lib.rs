@@ -81,4 +81,28 @@ mod test {
         let other = String::from_str(&env, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
         assert!(!client.verify_certificate(&id, &other));
     }
+    
+    #[test]
+    fn duplicate_certificate_is_rejected() {
+        let env = Env::default();
+        let contract_id = env.register(VeriIdContract, ());
+        let client = VeriIdContractClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize(&admin);
+
+        let id = String::from_str(&env, "CERT-001");
+        let hash = String::from_str(
+            &env,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        );
+
+        client.register_certificate(&admin, &id, &hash);
+
+        let result = client.try_register_certificate(&admin, &id, &hash);
+
+        assert!(result.is_err());
+    }
+
 }
