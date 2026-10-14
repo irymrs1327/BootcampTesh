@@ -122,6 +122,18 @@ mod test {
 
         assert!(result.is_err());
     }
+    
+    #[test]
+    fn missing_certificate_returns_none() {
+        let env = Env::default();
+        let contract_id = env.register(VeriIdContract, ());
+        let client = VeriIdContractClient::new(&env, &contract_id);
+
+        let id = String::from_str(&env, "CERT-NO-EXISTE");
+
+        assert!(client.get_certificate(&id).is_none());
+    }
+
 
 
 }
