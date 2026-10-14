@@ -41,3 +41,20 @@ def test_duplicate_id_is_rejected():
 def test_unknown_certificate_is_not_found():
     response = client.post("/api/certificates/verify", data={"certificate_id": "MISSING"}, files={"file": ("demo.pdf", PDF, "application/pdf")})
     assert response.json()["status"] == "NOT_FOUND"
+
+def test_empty_certificate_id_is_rejected():
+    response = client.post(
+        "/api/certificates",
+        data={"certificate_id": "", "issuer": "Institución Demo"},
+        files={"file": ("demo.pdf", PDF, "application/pdf")},
+    )
+    assert response.status_code == 422
+
+
+def test_certificate_id_too_long_is_rejected():
+    response = client.post(
+        "/api/certificates",
+        data={"certificate_id": "A" * 81, "issuer": "Institución Demo"},
+        files={"file": ("demo.pdf", PDF, "application/pdf")},
+    )
+    assert response.status_code == 400
