@@ -134,6 +134,4 @@ mod test {
         assert!(client.get_certificate(&id).is_none());
     }
 
-
-
 }
