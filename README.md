@@ -1,28 +1,76 @@
-# VERI-ID — prototipo académico
+# VERI-ID — Prototipo académico
 
-VERI-ID es un prototipo para demostrar el flujo de registro y verificación de documentos mediante SHA-256. Incluye un contrato inteligente para Stellar Soroban (Rust), un backend FastAPI y un frontend React.
+VERI-ID es un prototipo para registrar y verificar certificados digitales mediante hashes SHA-256 y contratos inteligentes en Stellar Soroban.
 
-> **Estado importante:** el backend y el frontend tienen un modo demostración local funcional. El contrato Soroban está incluido como código fuente, pero todavía no se ha desplegado ni conectado a Testnet. La interfaz lo indica expresamente y no inventa hashes de transacción. Para confirmar el contrato compilado hace falta instalar Rust y las herramientas de Stellar; este entorno de generación no cuenta con `rustc` ni `cargo`.
+El proyecto integra un contrato inteligente desarrollado en Rust, un frontend React con TypeScript y un backend FastAPI para las demostraciones locales.
+
+## Estado del proyecto
+
+- **Contrato Soroban:** desplegado en Stellar Testnet.
+- **Frontend:** permite conectar Freighter, registrar certificados y verificar documentos.
+- **Registro en blockchain:** se almacena el identificador, el hash del documento, el emisor y la fecha de emisión.
+- **Backend:** cuenta con endpoints de demostración local y pruebas automatizadas.
+- **Pruebas del backend:** 6 pruebas aprobadas.
+- **Red:** Stellar Testnet; se utilizan activos de prueba sin valor monetario real.
+
+## Tecnologías utilizadas
+
+- Rust y Soroban SDK.
+- Stellar Testnet y Stellar CLI.
+- React, TypeScript y Vite.
+- Freighter Wallet.
+- Python, FastAPI y SQLite.
+- SHA-256 para calcular la huella digital de los documentos.
+- Git y GitHub para el control de versiones.
+
+## Identificadores de Stellar Testnet
+
+**ID del contrato:**
+
+`CANH2OHT6CWWAF6CBWMCZSJDRV2AYWULTNNN5GXDS5QHTU5PUVP4YIYZ`
+
+**Transacción de despliegue:**
+
+https://stellar.expert/explorer/testnet/tx/4626905a78f12c3751608586ab1731d629bbde0137261780c0250fad6e03df32
+
+**Transacción de inicialización:**
+
+https://stellar.expert/explorer/testnet/tx/5d347edb6e52642cc13d1843745ff10c21ffbc92be4ef765414ad7061e0acdeb
+
+**Registro de prueba `CERT-002`:**
+
+https://stellar.expert/explorer/testnet/tx/a24f11a505dc84c6a767fecd5140d6186ede5981f8de4bc30b0d82a1ab864dfb
 
 ## Requisitos
-- Python 3.10 o posterior
-- Node.js 20 o posterior y npm
-- Para contrato: Rust, target WebAssembly para Soroban y Stellar CLI, siguiendo la documentación oficial de Stellar.
 
-## Ejecutar backend (Windows PowerShell)
-Desde la carpeta `VERI-ID`:
+- Python 3.10 o posterior.
+- Node.js 20 o posterior y npm.
+- Rust y las herramientas de compilación de contratos Soroban.
+- Stellar CLI.
+- Extensión Freighter configurada en Testnet.
+
+## Ejecutar el backend local
+
+Desde la carpeta raíz del proyecto:
 
 ```powershell
 cd backend
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Swagger estará en http://127.0.0.1:8000/docs.
+Documentación interactiva de la API:
 
-## Ejecutar frontend
+http://127.0.0.1:8000/docs
+
+Para ejecutar las pruebas automatizadas, desde la carpeta `backend`:
+
+```powershell
+python -m pytest
+```
+
+## Ejecutar el frontend
+
 Abre otra terminal en la carpeta raíz del proyecto:
 
 ```powershell
@@ -31,44 +79,48 @@ npm install
 npm run dev
 ```
 
-Abre la URL que Vite muestre (normalmente http://127.0.0.1:5173).
+Abre la dirección local que muestre Vite, normalmente:
 
-## Prueba funcional de punta a punta
-1. En Registrar certificado, usa `CERT-001` como identificador.
-2. Selecciona un PDF de prueba y registra.
-3. Cambia a Verificar documento, conserva el identificador y sube el mismo PDF: debe aparecer `HASH COINCIDENTE`.
-4. Edita/guarda una copia diferente del PDF y vuelve a verificar: debe aparecer `HASH NO COINCIDENTE`.
-5. Intenta registrar de nuevo `CERT-001`: debe responder con conflicto por identificador duplicado.
+http://127.0.0.1:5173
 
-La prueba local persiste los hashes en SQLite. No es una prueba de blockchain.
+## Flujo de registro y verificación
 
-## Ejecutar pruebas automatizadas del backend
-Desde `backend` con el entorno virtual activado:
+1. Conectar la cartera Freighter configurada en Stellar Testnet.
+2. Ingresar un identificador único para el certificado.
+3. Seleccionar un archivo PDF.
+4. Calcular su hash SHA-256.
+5. Autorizar y firmar la transacción mediante Freighter.
+6. Registrar el hash en el contrato Soroban.
+7. Seleccionar el mismo PDF en la sección de verificación.
+8. Comparar el hash calculado con el almacenado en el contrato.
 
-```powershell
-python -m pytest -q
-```
+Si ambos hashes coinciden, se muestra un resultado de coincidencia. Si el documento cambia, el hash será diferente y la verificación no coincidirá.
 
-## Contrato Soroban
-El contrato de `contract/src/lib.rs` ofrece:
-- `initialize(admin)`
-- `authorize_issuer(admin, issuer, authorized)`
-- `register_certificate(issuer, id, document_hash)`
-- `get_certificate(id)`
-- `verify_certificate(id, document_hash)`
+## Funciones del contrato
 
-El contrato almacena el hash, el identificador, la dirección del emisor y el tiempo de ledger. No almacena el PDF. La autorización real debe realizarse mediante las firmas Soroban; nunca coloques una clave secreta en el frontend.
+El contrato ubicado en `contract/src/lib.rs` implementa las siguientes operaciones:
 
-### Estado de la integración Stellar
-El contrato y la demostración local están separados deliberadamente para evitar representar un registro SQLite como una transacción on-chain. El siguiente paso técnico es compilar/probar el contrato con Soroban, desplegarlo en Testnet, guardar el contract ID y desarrollar el adaptador de transacciones firmado para que el backend llame al contrato. Para transacciones reales, usa un firmante de servidor seguro o una cartera compatible; no guardes secretos en el repositorio.
+- `initialize(admin)`: inicializa el contrato.
+- `authorize_issuer(admin, issuer, authorized)`: autoriza o revoca emisores.
+- `register_certificate(issuer, id, document_hash)`: registra un certificado.
+- `get_certificate(id)`: consulta un certificado.
+- `verify_certificate(id, document_hash)`: compara el hash presentado con el registrado.
 
-Consulta la documentación oficial:
+## Seguridad y limitaciones
+
+- El PDF no se almacena directamente en el contrato blockchain.
+- El hash SHA-256 permite detectar cambios en el contenido del archivo.
+- Un hash coincidente no demuestra por sí solo que la institución emisora sea legítima.
+- La red Testnet es de pruebas y no representa operaciones con dinero real.
+- El backend local utiliza SQLite y debe distinguirse de las operaciones realizadas directamente en Stellar.
+- Las claves secretas de las carteras no deben guardarse en el código fuente ni subirse a GitHub.
+
+## Documentación oficial
+
 - https://developers.stellar.org/docs/build/smart-contracts/getting-started
 - https://developers.stellar.org/docs/build/guides/transactions/invoke-contract-tx-sdk
 - https://stellar-sdk.readthedocs.io/en/stable/
 
-## Seguridad y límites
-- PDF máximo de 10 MB; el backend comprueba la cabecera `%PDF-`.
-- El archivo completo no se guarda ni se transmite a blockchain; se calcula su hash.
-- Un hash coincidente demuestra que el contenido coincide con el que se registró, no que la institución emisora sea legítima por sí sola.
-- La interfaz y el endpoint `/api/health` indican `LOCAL_DEMO` hasta que exista integración on-chain verificada.
+## Autoras y autores
+
+Proyecto académico de VERI-ID desarrollado como prototipo de registro y verificación de certificados digitales.
