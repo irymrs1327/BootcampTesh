@@ -1,4 +1,3 @@
-
 import * as StellarSdk from '@stellar/stellar-sdk';
 import {
   isConnected,
@@ -20,19 +19,21 @@ const server = new StellarSdk.rpc.Server(RPC_URL);
 const contract = new StellarSdk.Contract(CONTRACT_ID);
 
 export async function connectFreighter(): Promise<string> {
- const connection = await isConnected();
- console.log('Estado de Freighter:', connection);
+  const connection = await isConnected();
 
   if (!connection.isConnected) {
     throw new Error(
       'Freighter no está disponible. Instala o habilita la extensión.'
     );
   }
-const access = await requestAccess();
-console.log('Resultado de requestAccess:', access);
+
+  const access = await requestAccess();
+
+  if (access.error) {
+    throw new Error('No se pudo autorizar el acceso a Freighter.');
+  }
 
   const address = await getAddress();
-  console.log('Respuesta de getAddress:', address);
 
   if (!address.address) {
     throw new Error('No se pudo obtener la dirección de Freighter.');
@@ -44,7 +45,7 @@ console.log('Resultado de requestAccess:', access);
 async function prepareContractTransaction(
   address: string,
   operation: StellarSdk.xdr.Operation
-) {
+): Promise<StellarSdk.Transaction> {
   const account = await server.getAccount(address);
 
   const transaction = new StellarSdk.TransactionBuilder(account, {
@@ -81,7 +82,10 @@ async function signAndSubmitTransaction(
   const sent = await server.sendTransaction(signedTransaction);
 
   if (sent.status === 'ERROR') {
-    throw new Error('Stellar rechazó el envío de la transacción.');
+    console.error('Error al enviar la transacción:', sent);
+    throw new Error(
+      'Stellar rechazó el envío de la transacción. Revisa la consola.'
+    );
   }
 
   if (!sent.hash) {
@@ -89,7 +93,9 @@ async function signAndSubmitTransaction(
   }
 
   for (let attempt = 0; attempt < 30; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 1000);
+    });
 
     const result = await server.getTransaction(sent.hash);
 
@@ -98,7 +104,10 @@ async function signAndSubmitTransaction(
     }
 
     if (result.status === 'FAILED') {
-      throw new Error('La transacción falló al ejecutarse en Stellar.');
+      console.error('Detalle del fallo de Stellar:', result);
+      throw new Error(
+        `La transacción falló en Stellar. Hash: ${sent.hash}`
+      );
     }
   }
 
@@ -120,7 +129,11 @@ export async function registerCertificateOnChain(
     StellarSdk.nativeToScVal(documentHash, { type: 'string' })
   );
 
-  const transaction = await prepareContractTransaction(address, operation);
+  const transaction = await prepareContractTransaction(
+    address,
+    operation
+  );
+
   const transactionHash = await signAndSubmitTransaction(transaction);
 
   return {
@@ -153,11 +166,13 @@ export async function verifyCertificateOnChain(
   const simulation = await server.simulateTransaction(transaction);
 
   if ('error' in simulation) {
-    throw new Error(simulation.error);
+    throw new Error(String(simulation.error));
   }
 
   if (!simulation.result) {
-    throw new Error('No se pudo obtener el resultado de la verificación.');
+    throw new Error(
+      'No se pudo obtener el resultado de la verificación.'
+    );
   }
 
   return Boolean(
